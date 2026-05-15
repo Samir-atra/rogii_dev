@@ -1,0 +1,25 @@
+# Dataset
+dataset/
+*.zip
+
+# Analytics and Plots
+analytics/
+
+# Models
+models/
+
+# Private Notes
+docs/notes.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.env
+
+# Environment
+.venv/
+env/
+venv/
+ENV/
