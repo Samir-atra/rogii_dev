@@ -69,3 +69,6 @@ tempCodeRunnerFile.py
 
 # Ruff
 .ruff_cache/
+literature/
+*.pdf
+scripts/
