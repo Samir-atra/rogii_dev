@@ -32,6 +32,28 @@ The core challenge is matching the Gamma Ray signature from the horizontal well 
 - The `GR` logs contain frequent gaps (`NaN`).
 - Robust interpolation (linear, spline, or model-based) is required.
 
+#### Dataset Missing Value Statistics
+The following table summarizes the distribution of missing values across the entire dataset (Train and Test combined), as calculated by `src/analyze_missing_values.py`:
+
+| Feature   |   Null_Count |   Percentage (%) |
+|:----------|-------------:|-----------------:|
+| TVT_input |      3798140 |            56.7  |
+| GR        |      1511756 |            22.57 |
+| Geology   |       523474 |             7.81 |
+| ANCC      |        45634 |             0.68 |
+| EGFDL     |         6067 |             0.09 |
+| id        |            0 |             0    |
+| tvt       |            0 |             0    |
+| TVT       |            0 |             0    |
+| MD        |            0 |             0    |
+| X         |            0 |             0    |
+| Y         |            0 |             0    |
+| Z         |            0 |             0    |
+| ASTNU     |            0 |             0    |
+| ASTNL     |            0 |             0    |
+| EGFDU     |            0 |             0    |
+| BUDA      |            0 |             0    |
+
 ### C. Feature Engineering
 - **Spatial Gradients**: Changes in `Z` relative to `X, Y` indicate the well's inclination.
 - **Log Windows**: Using rolling statistics or sequence-based models to capture geological "shapes" rather than individual points.
