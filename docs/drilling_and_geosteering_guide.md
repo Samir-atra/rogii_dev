@@ -96,34 +96,65 @@ The formations are ordered here from **youngest (shallowest, top of the stratigr
 * **Depositional Environment & Description**: Deposited on a stable, shallow-water carbonate platform prior to the Eagle Ford transgression. It consists of hard, dense, microcrystalline limestone (wackestones to mudstones) with abundant fossil shell fragments (calcispheres and mollusk shells) [5, 6]. 
 * **Geosteering & GR Behavior**: The Buda Limestone acts as a major regional structural basement. It exhibits an **extremely low and clean Gamma Ray signature** (typically <30 API) with blocky, massive log features. In geosteering, the Buda boundary is a critical "floor" marker; if the drill bit crosses from the EGFDL into the Buda, it has drilled too deep, and must immediately steer upward to avoid leaving the reservoir.
 
-## 5. Sequence Modeling and Alignment Framework
+## 5. ROGII Competition Data Structure
+
+In the ROGII Wellbore Geology Prediction challenge, the dataset is organized on a per-well basis. For every well ID, there are three primary files that provide the physical, geological, and visual context required for geosteering.
+
+### 5.1 Horizontal Well Data (`well_id__horizontal_well.csv`)
+This is the primary input for the model. It contains the "Real-Time" data collected by the Logging While Drilling (LWD) tools as the bit moves through the formation.
+
+*   **Measured Depth (MD)**: The actual length of the drill string inside the hole. Unlike vertical depth, MD increases as the well turns horizontal. It is the independent variable for all measurements.
+*   **Spatial Coordinates (X, Y, Z)**:
+    *   **X & Y**: Easting and Northing coordinates in a global projected system. These track the lateral "walk" of the well.
+    *   **Z**: True Vertical Depth (TVD) relative to a reference datum (usually sea level). In geosteering, the goal is to adjust Z relative to the formation boundaries.
+*   **Gamma Ray (GR)**: The most critical geological feature. It measures the natural radioactivity of the rock. Since organic-rich shales (like the Lower Eagle Ford) concentrate Uranium, they show high GR spikes, while limestones (like Buda or Austin Chalk) show low GR.
+*   **Target Variables (TVT & TVT_input)**:
+    *   **True Vertical Thickness (TVT)**: The "label" we want to predict. It represents the vertical distance from a stratigraphic reference point (the top of the formation).
+    *   **TVT_input**: In the test set, this is the partial log provided to the model, which must be completed in the evaluation zones.
+*   **Geological Markers (ANCC, ASTNU, ASTNL, EGFDU, EGFDL, BUDA)**: These columns provide the structural elevation (Z) of each formation top at that specific lateral location. They represent the "ideal" model of the subsurface that the geosteering process is trying to refine.
+
+### 5.2 Type Well Data (`well_id__typewell.csv`)
+The Type Well is a vertical reference well (or "pilot hole") that defines the stratigraphic "DNA" of the area. It serves as the baseline against which the horizontal well is compared.
+
+*   **TVT (Reference Scale)**: The vertical depth axis for the entire stratigraphic column.
+*   **GR (Reference Signature)**: The vertical Gamma Ray profile. By matching the horizontal GR "snippet" to this vertical profile, the model can determine exactly which layer the bit is currently in.
+*   **Geology**: Categorical labels identifying the formation name for each depth interval. This provides the ground-truth sequence that the sequence models (LSTM/Transformers) aim to reconstruct from the horizontal data.
+
+### 5.3 Well Visualization (`well_id.png`)
+Each well includes a graphical cross-section plot. While not used directly as model input in most pipelines, it is vital for the drilling process:
+
+*   **Geometric Verification**: Shows the well trajectory (Z) relative to the predicted formation tops.
+*   **Correlation Quality**: Visualizes how well the horizontal GR log "stretches" or "squeezes" to match the vertical Type Well signature.
+*   **Decision Support**: Helps geologists identify if the well is "crossing" out of the target layer so they can issue a steering command to the directional driller.
+
+## 6. Sequence Modeling and Alignment Framework
 
 In the ROGII challenge, geosteering is mathematically framed as a **sequence-to-sequence spatial alignment and prediction task**. The goal is to map the sequential measurements of a horizontal well (such as Gamma Ray, Measured Depth, and Trajectory Elevation) onto the vertical stratigraphic sequence defined by the Type Well. This requires a modeling framework that combines physical geometric constraints, recurrent temporal memory, and advanced attention mechanisms.
 
-### 5.1 Incorporating Geometric Constraints and Formation Dip
+### 6.1 Incorporating Geometric Constraints and Formation Dip
 The relationship between Measured Depth (MD), wellbore Inclination, and True Vertical Depth (TVD) provides a geometric framework that constrains the possible stratigraphic positions. However, in geosteering, we must also account for **Formation Dip**—the tilt angle of the geological layers relative to the horizontal plane. 
 * **The Dip Formula**: The vertical distance changes relative to the layer boundaries according to:
   $$\Delta \text{TVT} = \Delta \text{MD} \times \sin(\theta_{\text{well}} - \phi_{\text{dip}})$$
   where $\theta_{\text{well}}$ is the wellbore inclination and $\phi_{\text{dip}}$ is the local formation dip.
 * **Physical Regularization**: Deep learning models are structurally regularized using custom loss functions in JAX to prevent them from predicting impossible trajectories (e.g., crossing a boundary vertically without corresponding changes in the GR signature) [5].
 
-### 5.2 Sequence Modeling with Recurrent Neural Networks (RNNs)
+### 6.2 Sequence Modeling with Recurrent Neural Networks (RNNs)
 Given the sequential nature of borehole data, LSTMs (Long Short-Term Memory) and GRUs (Gated Recurrent Units) are powerful tools for alignment.
 - **Contextual Memory**: These models can "remember" the signature of the layers already passed, helping to resolve ambiguities when current GR readings are non-unique.
 - **Bidirectional Processing**: Processing the log sequence in both directions (forward and backward MD) allows the model to leverage both past and future context to predict the current stratigraphic position.
 
-### 5.3 Transformer Architectures and Attention Mechanisms
+### 6.3 Transformer Architectures and Attention Mechanisms
 While RNNs are effective, Transformers offer distinct advantages for geosteering:
 - **Global Attention**: Transformers can attend to specific signatures in the vertical "Type Well" that match the current horizontal well segment, regardless of the distance between them in the sequence.
 - **Multi-Modal Integration**: Easily combining GR logs, spatial coordinates (X, Y, Z), and inclination into a single embedding space.
 
-### 5.4 Feature Engineering for Geosteering
+### 6.4 Feature Engineering for Geosteering
 To maximize model performance, we engineer features that capture geological "trends":
 - **Rolling Statistics**: Mean, standard deviation, and gradients of Gamma Ray over various window sizes (e.g., 5m, 10m, 50m).
 - **Spatial Derivatives**: Changes in elevation (dZ/dMD) relative to horizontal movement (dX, dY) to capture the well's approach angle to the formation.
 - **Log normalization**: Scaling GR values to a consistent range (0-150 API) to handle variations between different logging tools.
 
-## 6. Geosteering Process Visualization
+## 7. Geosteering Process Visualization
 
 The following diagram illustrates the iterative process of aligning horizontal well data with vertical type well references.
 
@@ -142,16 +173,16 @@ graph TD
     J --> A
 ```
 
-## 7. Practical Implementation with JAX/Keras
+## 8. Practical Implementation with JAX/Keras
 
 In this project, we utilize the **Keras 3** framework with a **JAX backend** to leverage the performance of the NVIDIA RTX 3050 GPU.
 - **Polars** is used for blazingly fast data ingestion and feature engineering.
 - **JAX** provides high-performance XLA compilation for our custom loss functions, particularly when incorporating physical/geometric constraints.
 
-## 8. Conclusion
+## 9. Conclusion
 The ROGII Wellbore Geology Prediction competition is not just a time-series problem; it is a spatial-stratigraphic alignment task. By combining advanced sequence models with solid geological principles and high-performance computing, we can build a robust system for automated geosteering.
 
-## 9. References & Bibliography
+## 10. References & Bibliography
 
 ### Academic Papers (Located in `literature/`)
 
