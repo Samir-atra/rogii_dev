@@ -27,22 +27,25 @@ def run_training(model_type="lstm", epochs=10, batch_size=32):
         batch_size: Batch size.
     """
     DATA_PATH = "/home/samer/Documents/competitions/ROGII/dataset/"
-    well_ids = get_all_well_ids(DATA_PATH)
-    
-    # Use a subset for verification
-    train_well_ids = well_ids[:50]
+    train_well_ids = get_all_well_ids(DATA_PATH, is_train=True)
+    test_well_ids = get_all_well_ids(DATA_PATH, is_train=False)
     
     feature_cols = ["GR", "X", "Y", "Z", "inclination", "GR_mean_50", "GR_std_50"]
     target_col = "TVT"
     window_size = 50
     
-    print(f"Loading data for {len(train_well_ids)} wells...")
-    X, y = prepare_all_wells(DATA_PATH, train_well_ids, feature_cols, target_col, window_size=window_size)
+    print(f"Loading data for {len(train_well_ids)} train wells and {len(test_well_ids)} test wells...")
+    X_train_data, y_train_data = prepare_all_wells(DATA_PATH, train_well_ids, feature_cols, target_col, window_size=window_size, is_train=True)
+    X_test_data, y_test_data = prepare_all_wells(DATA_PATH, test_well_ids, feature_cols, target_col, window_size=window_size, is_train=False)
+    
+    # Combine datasets
+    X = np.concatenate([X_train_data, X_test_data], axis=0)
+    y = np.concatenate([y_train_data, y_test_data], axis=0)
     
     # Simple split
-    split = int(0.8 * len(X))
-    X_train, X_val = X[:split], X[split:]
-    y_train, y_val = y[:split], y[split:]
+    split_index = int(0.8 * len(X))
+    X_train, X_val = X[:split_index], X[split_index:]
+    y_train, y_val = y[:split_index], y[split_index:]
     
     input_shape = (window_size, len(feature_cols))
     

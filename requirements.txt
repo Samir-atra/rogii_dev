@@ -1,0 +1,9 @@
+jax
+jaxlib
+keras
+matplotlib
+numpy
+polars
+pytest
+seaborn
+tensorflow
